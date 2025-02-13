@@ -82,7 +82,7 @@ private {
 
 struct Mallocator {
     //import std.experimental.allocator.common : platformAlignment;
-    import core.stdc.stdlib: malloc, realloc, free;
+    import core.stdc.stdlib: calloc, realloc, free;
 
     //enum uint alignment = platformAlignment;
 
@@ -90,7 +90,7 @@ static:
 
     void[] allocate(size_t bytes) @trusted @nogc nothrow {
         if (!bytes) return null;
-        auto p = malloc(bytes);
+        auto p = calloc(bytes, byte.sizeof);
         return p ? p[0 .. bytes] : null;
     }
 
