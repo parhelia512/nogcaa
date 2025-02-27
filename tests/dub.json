@@ -1,16 +1,26 @@
 {
-    "authors": [
-        "Ferhat Kurtulmuş"
-    ],
-    "copyright": "Copyright © 2020, Ferhat Kurtulmuş",
-    "description": "Simple associative array implementation for D (-betterC)",
-    "license": "boost",
-    "name": "betterc_test",
-    "targetType": "executable",
-    "importPaths": ["./"],
-    "sourcePaths": ["./"],
-    "dflags": ["-betterC"],
-    "dependencies": {
-      "bcaa": {"version": "*", "path": "../"}
+  "authors": [
+    "Ferhat Kurtulmuş",
+    "Alexander Chepkov"
+  ],
+  "copyright": "Copyright © 2020, Ferhat Kurtulmuş; 2025, Alexander Chepkov",
+  "description": "Simple associative array implementation for D (-betterC)",
+  "license": "boost",
+  "name": "betterc_test",
+  "targetType": "executable",
+  "importPaths": [
+    "./"
+  ],
+  "sourcePaths": [
+    "./"
+  ],
+  "dflags": [
+    "-betterC"
+  ],
+  "dependencies": {
+    "bcaa": {
+      "version": "*",
+      "path": "../"
     }
+  }
 }

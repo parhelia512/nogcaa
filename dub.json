@@ -1,11 +1,15 @@
 {
-    "copyright": "Copyright © 2020, Ferhat Kurtulmuş",
+    "copyright": "Copyright © 2020, Ferhat Kurtulmuş; 2025, Alexander Chepkov",
     "description": "Simple associative array implementation for D (-betterC)",
     "license": "boost",
     "name": "bcaa",
     "version": "0.0.9",
-    "importPaths": ["source"],
-    "sourcePaths": ["source"],
+    "importPaths": [
+        "source"
+    ],
+    "sourcePaths": [
+        "source"
+    ],
     "configurations": [
         {
             "name": "default",
@@ -14,7 +18,9 @@
         {
             "name": "betterC",
             "targetType": "library",
-            "dflags": ["-betterC"]
+            "dflags": [
+                "-betterC"
+            ]
         },
         {
             "name": "unittest",
