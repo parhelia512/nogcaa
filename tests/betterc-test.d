@@ -99,11 +99,11 @@ extern (C) void main() @nogc {
 
     foreach (i; 0 .. 10_000_000)
         aa0[i] = i;
-    printf("Heap of aa0[10_000_000] %lu\n", Mallocator.instance.heap());
+    printf("Heap of aa0[10_000_000]: %lu\n", Mallocator.instance.heap());
 
     foreach (i; 2000 .. 1000_000)
         aa0.remove(i);
-    printf("aa0[1000]: %d, heap: %lu\n", aa0[1000]);
+    printf("aa0[1000]: %d\n", aa0[1000]);
 
     printf("Elapsed time: %lf, heap: %lu \n", cast(double)sw.elapsed!"usecs"() / 1000_000, Mallocator.instance.heap());
 

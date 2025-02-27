@@ -24,9 +24,12 @@ version (LDC) {
 import core.stdc.string : strlen, strcpy, strncmp, memcpy, memset;
 import core.attribute;
 
+version (Windows) extern (C) private void* _memsetn(scope void* s, int c, size_t n) @nogc nothrow pure =>
+    memset(s, c, n);
+
 version (Posix) {
 @nogc nothrow pure:
-    extern (C) private void* _memset128ii(return scope void* s, int c, size_t n) =>
+    extern (C) private void* _memset128ii(scope void* s, int c, size_t n) =>
         memset(s, c, n);
 
     extern (C) void _d_dso_registry() =>
