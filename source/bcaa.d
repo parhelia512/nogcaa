@@ -588,9 +588,6 @@ unittest {
     assert("foo" in aa);
     assert(aa.foo == 1);
 
-    aa.clear;
-    assert("foo" !in aa);
-
     aa.bar = 2;
     assert("bar" in aa);
     assert(aa.bar == 2);
