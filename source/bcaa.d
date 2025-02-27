@@ -401,9 +401,8 @@ public:
 
             ++deleted;
             if (length * SHRINK_DEN < dim * SHRINK_NUM)
-                shrink();
-
-            return true;
+                if (shrink() == 0)
+                    return true;
         }
         return false;
     }
