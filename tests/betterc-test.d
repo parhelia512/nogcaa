@@ -11,18 +11,18 @@ version (Windows) {
     }
 
     extern (C) int gettimeofday(timeval* tp, void* tzp) @nogc nothrow {
-        import core.sys.windows.winbase : FILETIME, SYSTEMTIME;
+        import core.sys.windows.winbase : FILETIME, SYSTEMTIME, GetSystemTime, SystemTimeToFileTime;
 
         /** This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
           * until 00:00:00 January 1, 1970
           */
         static const ulong EPOCH = 116_444_736_000_000_000UL;
 
-        winbase.SYSTEMTIME system_time;
-        winbase.FILETIME file_time;
+        SYSTEMTIME system_time;
+        FILETIME file_time;
 
-        winbase.GetSystemTime(&system_time);
-        winbase.SystemTimeToFileTime(&system_time, &file_time);
+        GetSystemTime(&system_time);
+        SystemTimeToFileTime(&system_time, &file_time);
 
         ulong time = cast(ulong)file_time.dwLowDateTime;
         time += cast(ulong)file_time.dwHighDateTime << 32;
