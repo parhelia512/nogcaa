@@ -11,6 +11,8 @@ version (Windows) {
     }
 
     extern (C) int gettimeofday(timeval* tp, void* tzp) @nogc nothrow {
+        import core.sys.windows.winbase : FILETIME, SYSTEMTIME;
+
         /** This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
           * until 00:00:00 January 1, 1970
           */
