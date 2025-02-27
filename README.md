@@ -41,14 +41,14 @@ Simple associative array implementation for D (-betterC). Actually, this is a si
     aa1["İlter"] = "Kurcala";
     aa1.Ferhat = "Kurtulmuş";
 
-    foreach(pair; aa1){
+    foreach(pair; aa1)
         writeln(*pair.keyp, " -> ", *pair.valp);
-    }
+    
     
     if (auto valptr = "Dan" in aa1)
-        printf("%s exists!!!!\n", (*valptr).ptr );
+        printf("%s exists!\n", (*valptr).ptr );
     else
-        printf("does not exist!!!!\n".ptr);
+        printf("does not exist!\n".ptr);
 
     assert(aa1.remove("Ferhat") == true);
     assert(aa1.Ferhat == null);
@@ -70,10 +70,8 @@ Simple associative array implementation for D (-betterC). Actually, this is a si
 
     // byKey, byValue, and byKeyValue do not allocate
     // They use the range magic of D
-    foreach (pp; aa1.byKeyValue()){ 
+    foreach (pp; aa1.byKeyValue())
         printf("%s: %s\n", pp.key.ptr, pp.value.ptr);
-        
-    }
     
     aa1.free;
 
