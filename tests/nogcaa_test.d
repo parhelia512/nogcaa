@@ -1,7 +1,6 @@
-module betterc_test;
+module nogcaa_test;
 
-import bcaa;
-
+import nogcaa;
 import core.stdc.stdio;
 
 version (Windows) {
@@ -90,7 +89,7 @@ public:
 
 extern (C) void main() @nogc {
     auto sw = StopWatch(true);
-    Bcaa!(int, int, Mallocator) aa0;
+    Nogcaa!(int, int, Mallocator) aa0;
     scope (exit) {
         aa0.free;
         printf("Elapsed time: %lf, heap after aa0.free: %lu \n",
@@ -108,7 +107,7 @@ extern (C) void main() @nogc {
     printf("Elapsed time: %lf, heap: %lu \n", cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator.instance.heap());
 
     {
-        Bcaa!(string, string) aa1;
+        Nogcaa!(string, string) aa1;
         scope (exit) {
             printf("Heap before aa1.free(): %lu\n", Mallocator.instance.heap());
             aa1.free;
@@ -152,7 +151,7 @@ extern (C) void main() @nogc {
             string brand;
         }
 
-        Bcaa!(int, Guitar) guitars;
+        Nogcaa!(int, Guitar) guitars;
         scope (exit)
             guitars.free;
 
@@ -170,7 +169,7 @@ extern (C) void main() @nogc {
 
     // Test "in" works for AA without allocated storage.
     {
-        Bcaa!(int, int) emptyMap;
+        Nogcaa!(int, int) emptyMap;
         assert(0 !in emptyMap);
 
     }
@@ -183,7 +182,7 @@ extern (C) void main() @nogc {
             string txt;
         }
 
-        Bcaa!(int, S) aas;
+        Nogcaa!(int, S) aas;
         scope (exit) {
             printf("Heap before aas.free(): %lu\n", Mallocator.instance.heap());
             aas.free;

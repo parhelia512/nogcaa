@@ -1,9 +1,9 @@
 {
     "copyright": "Copyright © 2020, Ferhat Kurtulmuş; 2025, Alexander Chepkov",
-    "description": "Simple associative array implementation for D (-betterC)",
+    "description": "Simple associative array implementation for D (-betterC, @nogc)",
     "license": "boost",
-    "name": "bcaa",
-    "version": "0.0.9",
+    "name": "nogcaa",
+    "version": "0.1.0",
     "importPaths": [
         "source"
     ],
@@ -16,7 +16,7 @@
             "targetType": "library"
         },
         {
-            "name": "betterC",
+            "name": "nogc",
             "targetType": "library",
             "dflags": [
                 "-betterC"

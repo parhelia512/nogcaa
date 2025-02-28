@@ -3,13 +3,15 @@ docs.json
 dub.selections.json
 __dummy.html
 docs/
-/bcaa
+nogcaa
+nogcaa.[exe|o|so|obj|lst]
 *.so
 *.dylib
 *.dll
 *.a
 *.lib
-bcaa-test-*
+nogcaa_test
+nogcaa_test.[exe|o|so|obj|lst]
 *.exe
 *.o
 *.obj

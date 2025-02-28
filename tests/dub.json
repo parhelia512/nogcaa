@@ -4,9 +4,9 @@
     "Alexander Chepkov"
   ],
   "copyright": "Copyright © 2020, Ferhat Kurtulmuş; 2025, Alexander Chepkov",
-  "description": "Simple associative array implementation for D (-betterC)",
+  "description": "Simple associative array implementation for D (-betterC, @nogc)",
   "license": "boost",
-  "name": "betterc_test",
+  "name": "nogcaa_test",
   "targetType": "executable",
   "importPaths": [
     "./"
@@ -18,7 +18,7 @@
     "-betterC"
   ],
   "dependencies": {
-    "bcaa": {
+    "nogcaa": {
       "version": "*",
       "path": "../"
     }

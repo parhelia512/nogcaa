@@ -13,7 +13,7 @@
  * Simplified betterC port of druntime/blob/master/src/rt/aaA.d
  */
 
-module bcaa;
+module nogcaa;
 
 version (LDC) {
     version (D_BetterC) {
@@ -212,7 +212,7 @@ public:
 
 /// Mallocator code ENDS
 
-@mustuse struct Bcaa(K, V, Allocator = Mallocator) {
+@mustuse struct Nogcaa(K, V, Allocator = Mallocator) {
     struct Node {
         K key;
         V val;
@@ -574,7 +574,7 @@ private size_t mix(size_t h) @safe pure nothrow @nogc {
 
 nothrow @nogc:
 unittest {
-    Bcaa!(string, string) aa;
+    Nogcaa!(string, string) aa;
     scope (exit)
         aa.free;
     aa["foo"] = "bar";
@@ -582,7 +582,7 @@ unittest {
 }
 
 unittest {
-    Bcaa!(string, int) aa;
+    Nogcaa!(string, int) aa;
     scope (exit)
         aa.free;
     aa.foo = 1;
@@ -597,7 +597,7 @@ unittest {
 
 // Test "in" works for AA without allocated storage.
 unittest {
-    Bcaa!(int, int) emptyMap;
+    Nogcaa!(int, int) emptyMap;
     assert(0 !in emptyMap);
 }
 
@@ -608,7 +608,7 @@ unittest {
         string txt;
     }
 
-    Bcaa!(int, S) aas;
+    Nogcaa!(int, S) aas;
     scope (exit)
         aas.free;
 

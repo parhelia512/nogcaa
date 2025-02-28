@@ -1,4 +1,4 @@
-# bcaa
+# nogcaa
 Simple associative array implementation for D (-betterC). Actually, this is a simplified betterC port of druntime/blob/master/src/rt/aaA.d
  * betterC port of druntime/blob/master/src/rt/aaA
  * memory management using any memory allocator (malloc-based one is default).
@@ -6,21 +6,21 @@ Simple associative array implementation for D (-betterC). Actually, this is a si
 ## Use below subconfiguration for betterC in your dub.json
 ```json
 "subConfigurations": {
-        "bcaa": "betterC"
+        "nogcaa": "nogc"
 }
 ```
 
 ## Examples:
 ```d
-    import bcaa;
-    import bcaa: Mallocator;
+    import nogcaa;
+    import nogcaa: Mallocator;
 
     import core.stdc.stdio;
     import core.stdc.time;
 
     clock_t begin = clock();
 
-    Bcaa!(int, int) aa0;
+    Nogcaa!(int, int) aa0;
 
     foreach (i; 0..1000000)
         aa0[i] = i;
@@ -33,7 +33,7 @@ Simple associative array implementation for D (-betterC). Actually, this is a si
 
     clock_t end = clock(); printf("Elapsed time: %lf\n", cast(double)(end - begin) / CLOCKS_PER_SEC);
 
-    Bcaa!(string, string) aa1;
+    Nogcaa!(string, string) aa1;
 
     aa1["Stevie"] = "Ray Vaughan";
     aa1["Asım Can"] = "Gündüz";
@@ -79,7 +79,7 @@ Simple associative array implementation for D (-betterC). Actually, this is a si
         string brand;
     }
 
-    Bcaa!(int, Guitar) guitars;
+    Nogcaa!(int, Guitar) guitars;
 
     guitars[0] = Guitar("Fender");
     guitars[3] = Guitar("Gibson");
