@@ -123,13 +123,17 @@ static:
         return &__fat.ptr;
     }
 
+    Fat* __get(void* ptr) {
+        if (!ptr || cast(size_t)ptr < Fat.ptr.offsetof)
+            return null;
+
+        return cast(Fat*)(cast(size_t)ptr - Fat.ptr.offsetof);
+    }
+
     void __free(void* ptr) {
         import core.stdc.stdlib : free;
 
-        if (!ptr || cast(size_t)ptr < Fat.ptr.offsetof)
-            return;
-
-        Fat* __fat = cast(Fat*)(cast(size_t)ptr - Fat.ptr.offsetof);
+        Fat* __fat = __get(ptr);
         if (!__fat)
             return;
         __memory -= __fat.length; // Decrease counter
@@ -138,10 +142,7 @@ static:
     }
 
     size_t __length(void* ptr) {
-        if (!ptr || cast(size_t)ptr < Fat.ptr.offsetof)
-            return 0;
-
-        Fat* __fat = cast(Fat*)(cast(size_t)ptr - Fat.ptr.offsetof);
+        Fat* __fat = __get(ptr);
         if (!__fat)
             return 0;
 
@@ -401,8 +402,10 @@ public:
 
             ++deleted;
             if (length * SHRINK_DEN < dim * SHRINK_NUM)
-                if (shrink() == 0)
-                    return true;
+                if (shrink() != 0)
+                    return false;
+
+            return true;
         }
         return false;
     }
