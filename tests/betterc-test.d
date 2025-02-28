@@ -28,7 +28,7 @@ version (Windows) {
         time += cast(ulong)file_time.dwHighDateTime << 32;
 
         tp.tv_sec = cast(long)((time - EPOCH) / 10_000_000L);
-        tp.tv_usec = cast(long)(system_time.wMilliseconds * 1000);
+        tp.tv_usec = cast(long)(system_time.wMilliseconds * 1_000);
 
         return 0;
     }
@@ -71,7 +71,7 @@ public:
         if (this.started) {
             gettimeofday(&this.timeEnd, null),
             this.timeMeasured =
-                (this.timeEnd.tv_sec - this.timeStart.tv_sec) * 1000_000 + (
+                (this.timeEnd.tv_sec - this.timeStart.tv_sec) * 1_000_000 + (
                     this.timeEnd.tv_usec - this.timeStart.tv_usec);
         }
         return this.timeMeasured;
@@ -82,9 +82,9 @@ public:
         static if (op == "usecs")
             return this.elapsed();
         static if (op == "msecs")
-            return this.elapsed() / 1000;
+            return this.elapsed() / 1_000;
         static if (op == "seconds")
-            return this.elapsed() / 1000_000;
+            return this.elapsed() / 1_000_000;
     }
 }
 
@@ -94,18 +94,18 @@ extern (C) void main() @nogc {
     scope (exit) {
         aa0.free;
         printf("Elapsed time: %lf, heap after aa0.free: %lu \n",
-            cast(double)sw.elapsed!"usecs"() / 1000_000, Mallocator.instance.heap());
+            cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator.instance.heap());
     }
 
-    foreach (i; 0 .. 10_000_000)
+    foreach (i; 0 .. 1_000_000)
         aa0[i] = i;
-    printf("Heap of aa0[10_000_000]: %lu\n", Mallocator.instance.heap());
+    printf("Heap of aa0[%lu]: %lu\n", aa0.length, Mallocator.instance.heap());
 
-    foreach (i; 2000 .. 1000_000)
+    foreach (i; 2_000 .. 1_000_000)
         aa0.remove(i);
-    printf("aa0[1000]: %d\n", aa0[1000]);
+    printf("aa0[1_000]: %d\n", aa0[1_000]);
 
-    printf("Elapsed time: %lf, heap: %lu \n", cast(double)sw.elapsed!"usecs"() / 1000_000, Mallocator.instance.heap());
+    printf("Elapsed time: %lf, heap: %lu \n", cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator.instance.heap());
 
     {
         Bcaa!(string, string) aa1;
@@ -190,14 +190,14 @@ extern (C) void main() @nogc {
             printf("After: %lu\n", Mallocator.instance.heap());
         }
 
-        for (int i = 1024; i < 2048; i++) {
+        for (int i = 1_024; i < 2_048; i++) {
             aas[i] = S(i, i * 2, "caca");
         }
         aas[100] = S(10, 20, "caca");
 
         printf("aas[100].x=%d aas[100].y=%d txt: %s\n", aas[100].x, aas[100].y, aas[100].txt.ptr);
 
-        for (int i = 1024; i < 2048; i++)
+        for (int i = 1024; i < 2_048; i++)
             aas.remove(i);
     }
 }

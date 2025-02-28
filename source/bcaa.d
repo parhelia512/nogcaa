@@ -137,6 +137,8 @@ static:
         if (!__fat)
             return;
         __memory -= __fat.length; // Decrease counter
+        foreach (i; 0 .. __fat.length)
+            (&__fat.ptr)[i] = 0; // Clear sensitive data
 
         return free(__fat);
     }
@@ -239,8 +241,6 @@ private:
         auto _htable = Make.Array!Bucket(allocator, sz);
         if (!_htable)
             return -1;
-
-        _htable[] = Bucket.init;
         buckets = _htable;
 
         return 0;
