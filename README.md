@@ -28,7 +28,7 @@ Simple associative array implementation for D (-betterC). Actually, this is a si
     foreach (i; 2000..1000000)
         aa0.remove(i);
 
-    printf("%d \n", aa0[1000]);
+    printf("%d\n", aa0[1000]);
     aa0.free;
 
     clock_t end = clock(); printf("Elapsed time: %lf\n", cast(double)(end - begin) / CLOCKS_PER_SEC);
