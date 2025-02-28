@@ -1,93 +1,26 @@
 module nogcaa_test;
 
 import nogcaa;
+import nogcsw;
 import core.stdc.stdio;
 
-version (Windows) {
-    struct timeval {
-        long tv_sec;
-        long tv_usec;
-    }
-
-    extern (C) int gettimeofday(timeval* tp, void* tzp) @nogc nothrow {
-        import core.sys.windows.winbase : FILETIME, SYSTEMTIME, GetSystemTime, SystemTimeToFileTime;
-
-        /** This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
-          * until 00:00:00 January 1, 1970
-          */
-        static const ulong EPOCH = 116_444_736_000_000_000UL;
-
-        SYSTEMTIME system_time;
-        FILETIME file_time;
-
-        GetSystemTime(&system_time);
-        SystemTimeToFileTime(&system_time, &file_time);
-
-        ulong time = cast(ulong)file_time.dwLowDateTime;
-        time += cast(ulong)file_time.dwHighDateTime << 32;
-
-        tp.tv_sec = cast(long)((time - EPOCH) / 10_000_000L);
-        tp.tv_usec = cast(long)(system_time.wMilliseconds * 1_000);
-
-        return 0;
-    }
-}
-
-version (Posix) import core.sys.posix.sys.time : timeval, gettimeofday;
-
-struct StopWatch {
-@nogc nothrow:
-private align(8):
-    bool started;
-    timeval timeStart, timeEnd;
-    long timeMeasured;
-
-public:
-    this(bool autostart) {
-        if (autostart)
-            this.start();
-    }
-
-    void start() {
-        this.started = true;
-        gettimeofday(&this.timeStart, null), this.timeEnd = this.timeStart;
-        this.timeMeasured = 0;
-    }
-
-    void stop() {
-        if (this.started)
-            this.elapsed(), this.started = false;
-    }
-
-    void restart() {
-        this.stop(), this.start();
-    }
-
-    @property bool running() pure =>
-        this.started;
-
-    ulong elapsed() {
-        if (this.started) {
-            gettimeofday(&this.timeEnd, null),
-            this.timeMeasured =
-                (this.timeEnd.tv_sec - this.timeStart.tv_sec) * 1_000_000 + (
-                    this.timeEnd.tv_usec - this.timeStart.tv_usec);
-        }
-        return this.timeMeasured;
-    }
-
-    @property long elapsed(string op)()
-            if (op == "usecs" || op == "msecs" || op == "seconds") {
-        static if (op == "usecs")
-            return this.elapsed();
-        static if (op == "msecs")
-            return this.elapsed() / 1_000;
-        static if (op == "seconds")
-            return this.elapsed() / 1_000_000;
-    }
-}
-
 extern (C) void main() @nogc {
+    {
+        printf("Mallocator test\n");
+        auto memory = Mallocator.allocate!int(1024);
+        scope (exit) {
+            Mallocator.instance.deallocate(memory);
+            printf("Heap after deallocation: %lu\n", Mallocator.instance.heap());
+        }
+
+        printf("Heap after allocation: %lu\n", Mallocator.instance.heap());
+        printf("[Array] length: %lu\n", memory.length);
+        printf("Pointer length: %lu\n", Mallocator.length(memory.ptr));
+        printf("Pointer sizeof: %lu\n", Mallocator.__sizeof(memory.ptr));
+
+        assert(memory.length == Mallocator.length(memory.ptr));
+    }
+
     auto sw = StopWatch(true);
     Nogcaa!(int, int, Mallocator) aa0;
     scope (exit) {

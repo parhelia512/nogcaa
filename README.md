@@ -1,5 +1,5 @@
 # nogcaa
-Simple associative array implementation for D (-betterC). Actually, this is a simplified betterC port of druntime/blob/master/src/rt/aaA.d
+Simple associative array implementation for D (-betterC, @nogc). Actually, this is a simplified betterC port of druntime/blob/master/src/rt/aaA.d
  * betterC port of druntime/blob/master/src/rt/aaA
  * memory management using any memory allocator (malloc-based one is default).
 

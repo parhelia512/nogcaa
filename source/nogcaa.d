@@ -1,11 +1,11 @@
 /**
- * Simple associative array implementation for D (-betterC)
+ * Simple associative array implementation for D (-betterC, @nogc)
  *
  * The author of the original implementation: Martin Nowak
  *
  * Copyright:
- *  Copyright (c) 2020, Ferhat Kurtulmuş.
- *  Copyright (c) 2025, Alexander Chepkov.
+ *  Copyright (c) 2020, Ferhat Kurtulmuş
+ *  Copyright (c) 2025, Alexander Chepkov
  *
  *  License:
  *    $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -143,16 +143,8 @@ static:
         return free(__fat);
     }
 
-    size_t __length(void* ptr) {
-        Fat* __fat = __get(ptr);
-        if (!__fat)
-            return 0;
-
-        return __fat.length;
-    }
-
 public:
-    import std.traits : hasMember, isBasicType, isPointer, isDynamicArray, isArray;
+    import std.traits : hasMember, isPointer, isDynamicArray;
 
     size_t heap() =>
         __memory;
@@ -195,6 +187,19 @@ public:
             obj_ = null;
         }
     }
+
+    // Returns the size of the allocated memory block in bytes
+    size_t __sizeof(T)(T ptr) if (isPointer!T) {
+        Fat* __fat = __get(ptr);
+        if (!__fat)
+            return 0;
+
+        return __fat.length;
+    }
+
+    // Returns the length of the allocated memory block in elements
+    size_t length(T)(T ptr) if (isPointer!T) =>
+        __sizeof(ptr) / (*T).sizeof;
 
     alias dispose = deallocate;
 

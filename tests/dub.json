@@ -1,26 +1,26 @@
 {
-  "authors": [
-    "Ferhat Kurtulmuş",
-    "Alexander Chepkov"
-  ],
-  "copyright": "Copyright © 2020, Ferhat Kurtulmuş; 2025, Alexander Chepkov",
-  "description": "Simple associative array implementation for D (-betterC, @nogc)",
-  "license": "boost",
-  "name": "nogcaa_test",
-  "targetType": "executable",
-  "importPaths": [
-    "./"
-  ],
-  "sourcePaths": [
-    "./"
-  ],
-  "dflags": [
-    "-betterC"
-  ],
-  "dependencies": {
-    "nogcaa": {
-      "version": "*",
-      "path": "../"
-    }
-  }
+	"authors": [
+		"Ferhat Kurtulmuş",
+		"Alexander Chepkov"
+	],
+	"copyright": "Copyright © 2025, Ferhat Kurtulmuş, Alexander Chepkov",
+	"dependencies": {
+		"nogcaa": {
+			"path": "../"
+		},
+		"nogcsw": "~>0.1.1"
+	},
+	"description": "Simple associative array implementation for D (-betterC, @nogc)",
+	"dflags": [
+		"-betterC"
+	],
+	"importPaths": [
+		"./"
+	],
+	"license": "boost",
+	"name": "nogcaa_test",
+	"sourcePaths": [
+		"./"
+	],
+	"targetType": "executable"
 }
