@@ -3,7 +3,7 @@
     "description": "Simple associative array implementation for D (-betterC, @nogc)",
     "license": "boost",
     "name": "nogcaa",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "importPaths": [
         "source"
     ],
