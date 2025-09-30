@@ -27,6 +27,7 @@ extern (C) void main() @nogc {
         aa0.free;
         printf("Elapsed time: %lf, heap after aa0.free: %lu \n",
             cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator.instance.heap());
+        assert(Mallocator.instance.heap() == 0);
     }
 
     foreach (i; 0 .. 1_000_000)
@@ -100,14 +101,12 @@ extern (C) void main() @nogc {
             printf("%s \n", (*valPtr).brand.ptr);
     }
 
-    // Test "in" works for AA without allocated storage.
     {
         Nogcaa!(int, int) emptyMap;
         assert(0 !in emptyMap);
 
     }
 
-    // Try to force a memory leak - issue #5
     {
         struct S {
             int x;
@@ -122,14 +121,14 @@ extern (C) void main() @nogc {
             printf("After: %lu\n", Mallocator.instance.heap());
         }
 
-        for (int i = 1_024; i < 2_048; i++) {
-            aas[i] = S(i, i * 2, "caca");
+        for (size_t j = 0; j < 100; j++) {
+            for (int i = 0; i < 100_000; i++)
+                aas[i] = S(i, i * 2, "caca");
+
+            aas[100] = S(10, 20, "caca");
+
+            for (int i = 1_000; i < 90_000; i++)
+                aas.remove(i);
         }
-        aas[100] = S(10, 20, "caca");
-
-        printf("aas[100].x=%d aas[100].y=%d txt: %s\n", aas[100].x, aas[100].y, aas[100].txt.ptr);
-
-        for (int i = 1024; i < 2_048; i++)
-            aas.remove(i);
     }
 }

@@ -59,8 +59,8 @@ private enum {
     INIT_NUM_BUCKETS = 8,
     // Magic hash constants to distinguish empty, deleted, and filled buckets
     HASH_EMPTY = 0,
-    HASH_DELETED = 0x1,
-    HASH_FILLED_MARK = size_t(1) << 8 * size_t.sizeof - 1,
+    HASH_DELETED = 1,
+    HASH_FILLED = size_t(1) << (8 * size_t.sizeof - 1),
 
     // Specifies the maximum heap size. Default is 4 GB
     MAX_HEAP = 4_294_967_296
@@ -91,8 +91,6 @@ private {
     }
 }
 
-/// Mallocator code BEGINS
-
 @mustuse struct Mallocator {
 @nogc nothrow:
 
@@ -116,7 +114,7 @@ static:
         Fat* __fat = cast(Fat*)malloc(Fat.ptr.offsetof + size);
         if (!__fat)
             return null;
-        __memory += __fat.length = size; // Top up the memory counter
+        __memory += __fat.length = size;
         foreach (i; 0 .. __fat.length)
             (&__fat.ptr)[i] = 0;
 
@@ -136,9 +134,9 @@ static:
         Fat* __fat = __get(ptr);
         if (!__fat)
             return;
-        __memory -= __fat.length; // Decrease counter
+        __memory -= __fat.length;
         foreach (i; 0 .. __fat.length)
-            (&__fat.ptr)[i] = 0; // Clear sensitive data
+            (&__fat.ptr)[i] = 0;
 
         return free(__fat);
     }
@@ -188,7 +186,6 @@ public:
         }
     }
 
-    // Returns the size of the allocated memory block in bytes
     size_t __sizeof(T)(T ptr) if (isPointer!T) {
         Fat* __fat = __get(ptr);
         if (!__fat)
@@ -197,7 +194,6 @@ public:
         return __fat.length;
     }
 
-    // Returns the length of the allocated memory block in elements
     size_t length(T)(T ptr) if (isPointer!T) =>
         __sizeof(ptr) / (*T).sizeof;
 
@@ -214,8 +210,6 @@ public:
     T* Pointer(T, Allocator)(auto ref Allocator mallocator) =>
         cast(T*)mallocator.allocate!byte(T.sizeof).ptr;
 }
-
-/// Mallocator code ENDS
 
 @mustuse struct Nogcaa(K, V, Allocator = Mallocator) {
     struct Node {
@@ -236,7 +230,7 @@ public:
             hash == HASH_DELETED;
 
         @property bool filled() const =>
-            cast(ptrdiff_t)hash < 0;
+            !!(hash & HASH_FILLED);
     }
 
 private:
@@ -319,19 +313,14 @@ public:
         if (p.deleted)
             --deleted;
 
-        // Check load factor and possibly grow
         else if (++used * GROW_DEN > dim * GROW_NUM) {
             grow();
             p = findSlotInsert(keyHash);
-            // assert(p.empty);
         }
 
-        // Update search cache and allocate entry
         uint m = cast(uint)(p - buckets.ptr);
         if (m < firstUsed)
             firstUsed = m;
-
-        p.hash = keyHash;
 
         if (p.deleted) {
             p.entry.key = key;
@@ -347,13 +336,14 @@ public:
             p.entry = newNode;
         }
 
+        p.hash = keyHash;
+
         return 0;
     }
 
     private size_t calcHash(scope const K pkey) pure {
-        // Highest bit is set to distinguish empty/deleted from filled buckets
         const hash = TKey.getHash(pkey);
-        return mix(hash) | HASH_FILLED_MARK;
+        return mix(hash) | HASH_FILLED;
     }
 
     int resize(size_t sz) {
@@ -401,9 +391,7 @@ public:
 
         const hash = calcHash(key);
         if (auto p = findSlotLookup(hash, key)) {
-            // Clear entry
             p.hash = HASH_DELETED;
-            // Just mark it to be disposed
 
             ++deleted;
             if (length * SHRINK_DEN < dim * SHRINK_NUM)
@@ -487,7 +475,7 @@ public:
     auto copy() {
         auto newBuckets = Make.Array!Bucket(allocator, buckets.length);
         if (!newBuckets)
-            return typeof(this)(); // Return empty struct
+            return typeof(this)();
 
         memcpy(newBuckets.ptr, buckets.ptr, buckets.length * Bucket.sizeof);
         typeof(this) newAA = {newBuckets, firstUsed, used, deleted};
@@ -575,57 +563,4 @@ private size_t mix(size_t h) @safe pure nothrow @nogc {
     h *= m;
     h ^= h >> 15;
     return h;
-}
-
-nothrow @nogc:
-unittest {
-    Nogcaa!(string, string) aa;
-    scope (exit)
-        aa.free;
-    aa["foo"] = "bar";
-    assert(aa.foo == "bar");
-}
-
-unittest {
-    Nogcaa!(string, int) aa;
-    scope (exit)
-        aa.free;
-    aa.foo = 1;
-    aa.bar = 0;
-    assert("foo" in aa);
-    assert(aa.foo == 1);
-
-    aa.bar = 2;
-    assert("bar" in aa);
-    assert(aa.bar == 2);
-}
-
-// Test "in" works for AA without allocated storage.
-unittest {
-    Nogcaa!(int, int) emptyMap;
-    assert(0 !in emptyMap);
-}
-
-// Try to force a memory leak - issue #5
-unittest {
-    struct S {
-        int x, y;
-        string txt;
-    }
-
-    Nogcaa!(int, S) aas;
-    scope (exit)
-        aas.free;
-
-    for (int i = 1024; i < 2048; i++)
-        aas[i] = S(i, i * 2, "caca\0");
-
-    aas[100] = S(10, 20, "caca\0");
-
-    import core.stdc.stdio;
-
-    printf(".x=%d, .y=%d, .txt.ptr=%s\n", aas[100].x, aas[100].y, aas[100].txt.ptr);
-
-    for (int i = 1024; i < 2048; i++)
-        aas.remove(i);
 }
