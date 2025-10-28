@@ -10,8 +10,8 @@ nogcaa.[exe|o|so|obj|lst]
 *.dll
 *.a
 *.lib
-nogcaa_test
-nogcaa_test.[exe|o|so|obj|lst]
+test
+test.[exe|o|so|obj|lst]
 *.exe
 *.o
 *.obj
