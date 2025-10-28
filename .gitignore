@@ -16,3 +16,4 @@ nogcaa_test.[exe|o|so|obj|lst]
 *.o
 *.obj
 *.lst
+.vscode

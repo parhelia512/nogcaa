@@ -37,33 +37,34 @@ version (Posix) {
 }
 
 private enum {
-    // Grow threshold
+    /* Grow threshold */
     GROW_NUM = 4,
     GROW_DEN = 5,
-    // Shrink threshold
+    /* Shrink threshold */
     SHRINK_NUM = 1,
     SHRINK_DEN = 8,
-    // Grow factor
+    /* Grow factor */
     GROW_FAC = 4
 }
 
-// Growing the AA doubles it's size, so the shrink threshold must be
-// Smaller than half the grow threshold to have a hysteresis
+/* Growing the AA doubles it's size, so the shrink threshold must be */
+/* Smaller than half the grow threshold to have a hysteresis */
 static assert(GROW_FAC * SHRINK_NUM * GROW_DEN < GROW_NUM * SHRINK_DEN);
 
 private enum {
-    // Initial load factor (for literals), mean of both thresholds
+    /* Initial load factor (for literals), mean of both thresholds */
     INIT_NUM = (GROW_DEN * SHRINK_NUM + GROW_NUM * SHRINK_DEN) / 2,
     INIT_DEN = SHRINK_DEN * GROW_DEN,
 
     INIT_NUM_BUCKETS = 8,
-    // Magic hash constants to distinguish empty, deleted, and filled buckets
+    /* Magic hash constants to distinguish empty, deleted, and filled buckets */
     HASH_EMPTY = 0,
     HASH_DELETED = 1,
-    HASH_FILLED = size_t(1) << (8 * size_t.sizeof - 1),
+    HASH_FILLED = size_t(1) << (8 * size_t.sizeof - 1)
+}
 
-    // Specifies the maximum heap size. Default is 4 GB
-    MAX_HEAP = 4_294_967_296
+static if (!__traits(compiles, MAX_HEAP)) {
+    enum MAX_HEAP = 4_294_967_296;
 }
 
 private {
@@ -81,8 +82,7 @@ private {
 
         bool equals(scope const Key k1, scope const Key k2) {
             static if (is(K == const(char)*))
-                return strlen(k1) == strlen(k2) &&
-                    strcmp(k1, k2) == 0;
+                return strlen(k1) == strlen(k2) && strcmp(k1, k2) == 0;
             else static if (isSomeString!K)
                 return k1.length == k2.length && strncmp(k1.ptr, k2.ptr, k1.length) == 0;
             else
@@ -96,60 +96,80 @@ private {
 
 private:
     struct Fat {
+    align(byte.sizeof):
         size_t length;
         byte ptr;
     }
 
+    static if (size_t.sizeof == uint.sizeof) {
+        static assert(Fat.sizeof == 5);
+    } else static if (size_t.sizeof == ulong.sizeof) {
+        static assert(Fat.sizeof == 9);
+    } else
+        static assert(false, "Unsupported OS bitness");
+
 static:
-    __gshared size_t __memory;
+        __gshared size_t _Allocated_memory;
 
-    void* __malloc(size_t size) {
-        import core.stdc.stdlib : malloc, exit, EXIT_FAILURE;
+    void* malloc(size_t size) {
+        static import core.stdc.stdlib;
 
-        if (!size)
+        if (!size || size > MAX_HEAP || _Allocated_memory > MAX_HEAP - size)
             return null;
-        else if (__memory + size > MAX_HEAP)
-            exit(EXIT_FAILURE);
 
-        Fat* __fat = cast(Fat*)malloc(Fat.ptr.offsetof + size);
-        if (!__fat)
+        size_t header = Fat.ptr.offsetof;
+        if (size > size_t.max - header)
             return null;
-        __memory += __fat.length = size;
-        foreach (i; 0 .. __fat.length)
-            (&__fat.ptr)[i] = 0;
 
-        return &__fat.ptr;
+        Fat* _Fat = cast(Fat*)core.stdc.stdlib.calloc(header + size, byte.sizeof);
+        if (!_Fat)
+            return null;
+
+        _Allocated_memory += _Fat.length = size;
+
+        return &_Fat.ptr;
     }
 
-    Fat* __get(void* ptr) {
-        if (!ptr || cast(size_t)ptr < Fat.ptr.offsetof)
+    Fat* get(void* ptr) {
+        import core.stdc.stdint : uintptr_t;
+
+        if (!ptr)
             return null;
 
-        return cast(Fat*)(cast(size_t)ptr - Fat.ptr.offsetof);
+        return cast(Fat*)(cast(uintptr_t)ptr - Fat.ptr.offsetof);
     }
 
-    void __free(void* ptr) {
-        import core.stdc.stdlib : free;
+    void free(void* ptr) {
+        static import core.stdc.stdlib;
 
-        Fat* __fat = __get(ptr);
-        if (!__fat)
+        Fat* _Fat = get(ptr);
+        if (!_Fat)
             return;
-        __memory -= __fat.length;
-        foreach (i; 0 .. __fat.length)
-            (&__fat.ptr)[i] = 0;
 
-        return free(__fat);
+        _Allocated_memory = (_Allocated_memory >= _Fat.length) ? _Allocated_memory - _Fat.length : 0;
+        foreach (i; 0 .. _Fat.length)
+            (&_Fat.ptr)[i] = 0;
+
+        return core.stdc.stdlib.free(_Fat);
+    }
+
+    size_t __sizeof(T)(T ptr) if (isPointer!T) {
+        Fat* _Fat = get(ptr);
+        if (!_Fat)
+            return 0;
+
+        return _Fat.length;
     }
 
 public:
     import std.traits : hasMember, isPointer, isDynamicArray;
 
-    size_t heap() =>
-        __memory;
+    @property size_t heap() =>
+        _Allocated_memory;
 
     T* allocate(T, Args...)(Args args) if (is(T == struct) || is(T == union)) {
         static immutable modeinit = cast(immutable(T))T();
-        T* ptr = cast(T*)__malloc(T.sizeof);
+        T* ptr = cast(T*)malloc(T.sizeof);
         if (!ptr)
             return null;
 
@@ -161,7 +181,7 @@ public:
     }
 
     T[] allocate(T)(size_t length) {
-        T* ptr = cast(T*)__malloc(length * T.sizeof);
+        T* ptr = cast(T*)malloc(length * T.sizeof);
         if (!ptr)
             return null;
 
@@ -179,19 +199,11 @@ public:
 
         static if (doFree) {
             static if (isDynamicArray!T)
-                __free(obj_.ptr);
+                free(obj_.ptr);
             else
-                __free(cast(void*)obj_);
+                free(cast(void*)obj_);
             obj_ = null;
         }
-    }
-
-    size_t __sizeof(T)(T ptr) if (isPointer!T) {
-        Fat* __fat = __get(ptr);
-        if (!__fat)
-            return 0;
-
-        return __fat.length;
     }
 
     size_t length(T)(T ptr) if (isPointer!T) =>
@@ -214,15 +226,14 @@ public:
 @mustuse struct Nogcaa(K, V, Allocator = Mallocator) {
     struct Node {
         K key;
-        V val;
-
-        alias value = val;
+        V value;
     }
 
     struct Bucket {
     private pure nothrow @nogc @safe:
         size_t hash;
         Node* entry;
+
         @property bool empty() const =>
             hash == HASH_EMPTY;
 
@@ -237,7 +248,7 @@ private:
     Bucket[] buckets;
 
     int allocHtable(size_t sz) @nogc nothrow {
-        auto _htable = Make.Array!Bucket(allocator, sz);
+        Bucket[] _htable = Make.Array!Bucket(allocator, sz);
         if (!_htable)
             return -1;
         buckets = _htable;
@@ -246,20 +257,15 @@ private:
     }
 
     int initTableIfNeeded() @nogc nothrow {
-        if (buckets is null) {
+        if (buckets is null)
             if (allocHtable(INIT_NUM_BUCKETS) != 0)
                 return -1;
-
-            firstUsed = INIT_NUM_BUCKETS;
-        }
 
         return 0;
     }
 
 public:
-    uint firstUsed;
-    uint used;
-    uint deleted;
+    size_t used, deleted;
 
     alias TKey = KeyType!K;
 
@@ -297,14 +303,14 @@ public:
         }
     }
 
-    int set(scope const K key, scope const V val) {
+    int set(scope const K key, scope const V value) {
         if (initTableIfNeeded() != 0)
             return -1;
 
         const keyHash = calcHash(key);
 
         if (auto p = findSlotLookup(keyHash, key)) {
-            p.entry.val = cast(V)val;
+            p.entry.value = cast(V)value;
             return 0;
         }
 
@@ -312,26 +318,19 @@ public:
 
         if (p.deleted)
             --deleted;
-
-        else if (++used * GROW_DEN > dim * GROW_NUM) {
-            grow();
-            p = findSlotInsert(keyHash);
-        }
-
-        uint m = cast(uint)(p - buckets.ptr);
-        if (m < firstUsed)
-            firstUsed = m;
+        else if (++used * GROW_DEN > dim * GROW_NUM)
+            grow(), p = findSlotInsert(keyHash);
 
         if (p.deleted) {
             p.entry.key = key;
-            p.entry.val = cast(V)val;
+            p.entry.value = cast(V)value;
         } else {
             Node* newNode = Make.Pointer!Node(allocator);
             if (!newNode)
                 return -1;
 
             newNode.key = key;
-            newNode.val = cast(V)val;
+            newNode.value = cast(V)value;
 
             p.entry = newNode;
         }
@@ -351,17 +350,16 @@ public:
         if (allocHtable(sz) != 0)
             return -1;
 
-        foreach (ref b; obuckets[firstUsed .. $]) {
+        foreach (ref b; obuckets[0 .. $]) {
             if (b.filled)
                 *findSlotInsert(b.hash) = b;
-            if (b.empty || b.deleted) {
+            else if (b.empty || b.deleted) {
                 allocator.dispose(b.entry);
 
                 b.entry = null;
             }
         }
 
-        firstUsed = 0;
         used -= deleted;
         deleted = 0;
 
@@ -429,38 +427,38 @@ public:
 
         const keyHash = calcHash(key);
         if (auto buck = findSlotLookup(keyHash, key))
-            return &buck.entry.val;
+            return &buck.entry.value;
         return null;
     }
 
-    /// Returning slice must be deallocated like Allocator.dispose(keys);
-    // Use byKeyValue to avoid extra allocations
+    /* Returning slice must be deallocated like Allocator.dispose(keys); */
+    /* Use byKeyValue to avoid extra allocations */
     K[] keys() {
         K[] ks = Make.Array!K(allocator, length);
         if (!ks)
             return null;
 
         size_t j;
-        foreach (ref b; buckets[firstUsed .. $])
+        foreach (ref b; buckets[0 .. $])
             if (b.filled)
                 ks[j++] = b.entry.key;
 
         return ks;
     }
 
-    /// Returning slice must be deallocated like Allocator.dispose(values);
-    // Use byKeyValue to avoid extra allocations
+    /* Returning slice must be deallocated like Allocator.dispose(values); */
+    /* Use byKeyValue to avoid extra allocations */
     V[] values() {
-        V[] vals = Make.Array!V(allocator, length);
-        if (!vals)
+        V[] values = Make.Array!V(allocator, length);
+        if (!values)
             return null;
 
-        size_t j;
-        foreach (ref b; buckets[firstUsed .. $])
+        size_t j = 0;
+        foreach (ref b; buckets[0 .. $])
             if (b.filled)
-                vals[j++] = b.entry.val;
+                values[j++] = b.entry.value;
 
-        return vals;
+        return values;
     }
 
     void free() {
@@ -473,12 +471,9 @@ public:
     }
 
     auto copy() {
-        auto newBuckets = Make.Array!Bucket(allocator, buckets.length);
-        if (!newBuckets)
-            return typeof(this)();
-
-        memcpy(newBuckets.ptr, buckets.ptr, buckets.length * Bucket.sizeof);
-        typeof(this) newAA = {newBuckets, firstUsed, used, deleted};
+        typeof(this) newAA;
+        foreach (pairs; this.byKeyValue())
+            newAA[pairs.key] = pairs.value;
         return newAA;
     }
 
@@ -487,26 +482,25 @@ public:
             return 0;
 
         int result = 0;
-        foreach (ref b; buckets[firstUsed .. $]) {
+        foreach (ref b; buckets[0 .. $]) {
             if (!b.filled)
                 continue;
-            result = dg(AAPair!(K, V)(&b.entry.key, &b.entry.val));
+            result = dg(AAPair!(K, V)(&b.entry.key, &b.entry.value));
             if (result)
                 break;
         }
         return 0;
     }
 
-    struct BCAARange(alias rangeType) {
+    struct NogcaaRange(alias rangeType) {
         typeof(buckets) bucks;
-        size_t len;
-        size_t current;
+        size_t length, current = 0;
 
     nothrow @nogc:
         bool empty() const pure @safe =>
-            len == 0;
+            this.length == 0;
 
-        // Front must be called first before popFront
+        /* Front must be called first before popFront */
         auto front() {
             while (bucks[current].hash <= 0)
                 ++current;
@@ -519,32 +513,32 @@ public:
         void popFront() {
             foreach (ref b; bucks[current .. $])
                 if (!b.empty) {
-                    --len, ++current;
+                    --this.length, ++current;
                     break;
                 }
         }
     }
 
-    // The following functions return an InputRange
+    /* The following functions return an InputRange */
     auto byKeyValue() {
         auto rangeType(alias T) = T;
-        return BCAARange!rangeType(buckets, length, firstUsed);
+        return NogcaaRange!rangeType(buckets, length);
     }
 
     auto byKey() {
         auto rangeType(alias T) = T.key;
-        return BCAARange!rangeType(buckets, length, firstUsed);
+        return NogcaaRange!rangeType(buckets, length);
     }
 
     auto byValue() {
-        auto rangeType(alias T) = T.val;
-        return BCAARange!rangeType(buckets, length, firstUsed);
+        auto rangeType(alias T) = T.value;
+        return NogcaaRange!rangeType(buckets, length);
     }
 }
 
 struct AAPair(K, V) {
-    K* keyp;
-    V* valp;
+    K* pkey;
+    V* pvalue;
 }
 
 private size_t nextpow2(size_t n) pure nothrow @nogc {

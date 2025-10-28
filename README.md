@@ -43,8 +43,7 @@ Simple associative array implementation for D (-betterC, @nogc). Actually, this 
 
     foreach(pair; aa1)
         writeln(*pair.keyp, " -> ", *pair.valp);
-    
-    
+
     if (auto valptr = "Dan" in aa1)
         printf("%s exists!\n", (*valptr).ptr );
     else
@@ -68,11 +67,10 @@ Simple associative array implementation for D (-betterC, @nogc). Actually, this 
     foreach(key; keys)
         printf("%s -> %s \n", key.ptr, aa1[key].ptr);
 
-    // byKey, byValue, and byKeyValue do not allocate
-    // They use the range magic of D
+    /* byKey, byValue, and byKeyValue do not allocate */
     foreach (pp; aa1.byKeyValue())
         printf("%s: %s\n", pp.key.ptr, pp.value.ptr);
-    
+
     aa1.free;
 
     struct Guitar {
@@ -87,10 +85,10 @@ Simple associative array implementation for D (-betterC, @nogc). Actually, this 
 
     assert(guitars[3].brand == "Gibson");
 
-    printf("%s \n", guitars[356].brand.ptr);
+    printf("%s\n", guitars[356].brand.ptr);
 
     if(auto valPtr = 3 in guitars)
-        printf("%s \n", (*valPtr).brand.ptr);
+        printf("%s\n", (*valPtr).brand.ptr);
 
     guitars.free;
 
