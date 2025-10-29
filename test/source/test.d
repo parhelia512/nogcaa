@@ -2,20 +2,36 @@ module test;
 
 import nogcaa;
 import nogcsw;
-import core.stdc.stdio;
+
+static auto println(string format, Args...)(Args args) @nogc {
+    import core.stdc.stdio;
+
+    string fmt(string searchfor)() {
+        char[] ctfeFmt = cast(char[])format;
+
+        version (Windows)
+            static foreach (i; 0 .. format.length - searchfor.length + 1)
+                static if (format[i .. i + searchfor.length] == searchfor)
+                    ctfeFmt[i .. i + searchfor.length] = "%lu";
+
+        return cast(string)ctfeFmt ~ "\r\n";
+    }
+
+    return printf(mixin('"' ~ fmt!"%zu" ~ '"'), args);
+}
 
 extern (C) void main() @nogc {
-    printf("Mallocator test\n");
+    println!"Mallocator test";
     auto memory = Mallocator.allocate!int(1024);
     scope (exit) {
         Mallocator.instance.deallocate(memory);
-        printf("Heap after deallocation: %zu\n", Mallocator.instance.heap);
+        println!"Heap after deallocation: %zu"(Mallocator.instance.heap);
         assert(Mallocator.instance.heap == 0);
     }
 
-    printf("Heap after allocation: %zu\n", Mallocator.instance.heap);
-    printf("[Array] length: %zu\n", memory.length);
-    printf("Pointer length: %zu\n", Mallocator.length(memory.ptr));
+    println!"Heap after allocation: %zu"(Mallocator.instance.heap);
+    println!"[Array] length: %zu"(memory.length);
+    println!"Pointer length: %zu"(Mallocator.length(memory.ptr));
 
     assert(memory.length == Mallocator.length(memory.ptr));
 
@@ -23,26 +39,27 @@ extern (C) void main() @nogc {
     Nogcaa!(int, int) aa0;
     scope (exit) {
         aa0.free;
-        printf("Elapsed time: %lf, heap after aa0.free: %zu \n",
+        println!"Elapsed time: %lf, heap after aa0.free: %zu"(
             cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator.instance.heap);
     }
 
     foreach (i; 0 .. 1_000_000)
         aa0[i] = i;
-    printf("Heap of aa0[%zu]: %zu\n", aa0.length, Mallocator.instance.heap);
+    println!"Heap of aa0[%zu]: %zu"(aa0.length, Mallocator.instance.heap);
 
     foreach (i; 2_000 .. 1_000_000)
         aa0.remove(i);
-    printf("aa0[1_000]: %d\n", aa0[1_000]);
+    println!"aa0[1_000]: %d"(aa0[1_000]);
 
-    printf("Elapsed time: %lf, heap: %zu \n", cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator
+    println!"Elapsed time: %lf, heap: %zu"(
+        cast(double)sw.elapsed!"usecs"() / 1_000_000, Mallocator
             .instance.heap);
 
     Nogcaa!(string, string) aa1;
     scope (exit) {
-        printf("Heap before aa1.free(): %zu\n", Mallocator.instance.heap);
+        println!"Heap before aa1.free(): %zu"(Mallocator.instance.heap);
         aa1.free;
-        printf("After: %zu\n", Mallocator.instance.heap);
+        println!"After: %zu"(Mallocator.instance.heap);
     }
 
     aa1["Stevie"] = "Ray Vaughan";
@@ -53,12 +70,12 @@ extern (C) void main() @nogc {
     aa1.Ferhat = "Kurtulmuş";
 
     foreach (pair; aa1)
-        printf("%s -> %s\n", (*pair.pkey).ptr, (*pair.pvalue).ptr);
+        println!"%s -> %s"((*pair.pkey).ptr, (*pair.pvalue).ptr);
 
     if (auto pvalue = "Dan" in aa1)
-        printf("Dan %s exists!\n", (*pvalue).ptr);
+        println!"Dan %s exists!"((*pvalue).ptr);
     else
-        printf("Dan does not exist!\n");
+        println!"Dan does not exist!";
 
     assert(aa1.remove("Ferhat") == true);
     assert(aa1["Ferhat"] == null);
@@ -67,16 +84,16 @@ extern (C) void main() @nogc {
 
     aa1.rehash();
 
-    printf("%s\n", aa1["Stevie"].ptr);
-    printf("%s\n", aa1["Asım Can"].ptr);
-    printf("%s\n", aa1.Dan.ptr);
-    printf("%s\n", aa1["Ferhat"].ptr);
+    println!"%s"(aa1["Stevie"].ptr);
+    println!"%s"(aa1["Asım Can"].ptr);
+    println!"%s"(aa1.Dan.ptr);
+    println!"%s"(aa1["Ferhat"].ptr);
 
     auto keys = aa1.keys;
     scope (exit)
         Mallocator.instance.dispose(keys);
     foreach (key; keys)
-        printf("%s -> %s\n", key.ptr, aa1[key].ptr);
+        println!"%s -> %s"(key.ptr, aa1[key].ptr);
 
     struct Guitar {
         string brand;
@@ -92,13 +109,13 @@ extern (C) void main() @nogc {
 
     assert(guitars[3].brand == "Gibson");
 
-    printf("%s\n", guitars[356].brand.ptr);
+    println!"%s"(guitars[356].brand.ptr);
 
     if (auto valPtr = 3 in guitars)
-        printf("%s\n", (*valPtr).brand.ptr);
+        println!"%s"((*valPtr).brand.ptr);
 
     foreach (pairs; guitars.byKeyValue())
-        printf("Guitar iter: %d, %s\n", pairs.key, pairs.value.brand.ptr);
+        println!"Guitar iter: %d, %s"(pairs.key, pairs.value.brand.ptr);
 
     Nogcaa!(int, int) emptyMap;
     assert(0 !in emptyMap);
@@ -113,9 +130,9 @@ extern (C) void main() @nogc {
 
     Nogcaa!(int, S) aas;
     scope (exit) {
-        printf("Heap before aas.free(): %zu\n", Mallocator.instance.heap);
+        println!"Heap before aas.free(): %zu"(Mallocator.instance.heap);
         aas.free;
-        printf("After: %zu\n", Mallocator.instance.heap);
+        println!"After: %zu"(Mallocator.instance.heap);
     }
 
     for (size_t j = 0; j < 100; j++) {
@@ -133,11 +150,11 @@ extern (C) void main() @nogc {
         short b;
     }
 
-    printf("Mallocator struct allocate test\n");
+    println!"Mallocator struct allocate test";
     auto p = Mallocator.allocate!Small();
     scope (exit) {
         Mallocator.instance.deallocate(p);
-        printf("Mallocator heap after struct free: %zu\n", Mallocator.instance.heap);
+        println!"Mallocator heap after struct free: %zu"(Mallocator.instance.heap);
     }
 
     p.a = 42;
@@ -151,13 +168,13 @@ extern (C) void main() @nogc {
     arr[0] = -1;
     arr[$ - 1] = 12_345;
 
-    printf("Array first: %d last: %d length: %zu\n", arr[0], arr[$ - 1], arr.length);
+    println!"Array first: %d last: %d length: %zu"(arr[0], arr[$ - 1], arr.length);
     Mallocator.instance.deallocate(arr);
 
     Nogcaa!(int, int) map;
     scope (exit) {
         map.free;
-        printf("map heap after free: %zu\n", Mallocator.instance.heap);
+        println!"map heap after free: %zu"(Mallocator.instance.heap);
     }
 
     foreach (i; 0 .. 1024) {
@@ -211,7 +228,7 @@ extern (C) void main() @nogc {
     auto copied = sMap.copy();
 
     foreach (pairs; copied.byKeyValue())
-        printf("Copied: %s, %s\n", pairs.key.ptr, pairs.value.ptr);
+        println!"Copied: %s, %s"(pairs.key.ptr, pairs.value.ptr);
 
     import core.stdc.string : strncmp;
 
@@ -253,7 +270,6 @@ extern (C) void main() @nogc {
         int x;
 
         ~this() {
-            printf("Called __dtor for %d\n", x);
             x = -1;
         }
     }
@@ -292,5 +308,5 @@ extern (C) void main() @nogc {
 
     assert(growMap.length >= 1);
 
-    printf("All additional tests passed. Final heap: %zu\n", Mallocator.instance.heap);
+    println!"All additional tests passed. Final heap: %zu"(Mallocator.instance.heap);
 }
