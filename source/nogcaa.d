@@ -5,7 +5,7 @@
  *
  * Copyright:
  *  Copyright (c) 2020, Ferhat Kurtulmuş
- *  Copyright (c) 2025, Alexander Chepkov
+ *  Copyright (c) 2026, Alexander Chepkov
  *
  *  License:
  *    $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -14,12 +14,6 @@
  */
 
 module nogcaa;
-
-version (LDC) {
-    version (D_BetterC) {
-        pragma(LDC_no_moduleinfo);
-    }
-}
 
 import core.stdc.string : strlen, strcpy, strncmp, memcpy, memset;
 import core.attribute;
@@ -60,7 +54,9 @@ private enum {
     /* Magic hash constants to distinguish empty, deleted, and filled buckets */
     HASH_EMPTY = 0,
     HASH_DELETED = 1,
-    HASH_FILLED = size_t(1) << (8 * size_t.sizeof - 1)
+    HASH_FILLED = size_t(1) << (8 * size_t.sizeof - 1),
+
+    SIZE_WIDTH = size_t.sizeof * 8
 }
 
 static if (!__traits(compiles, MAX_HEAP)) {
@@ -68,8 +64,6 @@ static if (!__traits(compiles, MAX_HEAP)) {
 }
 
 private {
-    alias hash_t = size_t;
-
     enum isSomeString(T) = is(immutable T == immutable C[], C) &&
         (is(C == char) || is(C == wchar) || is(C == dchar));
 
@@ -77,8 +71,49 @@ private {
         alias Key = K;
 
     @nogc nothrow pure:
-        hash_t getHash(scope const Key key) @safe =>
-            key.hashOf;
+        import std.traits : isDynamicArray, isStaticArray,
+            isPointer, isIntegral;
+
+        size_t fnv1a(T)(T data, size_t length) @trusted
+                if (isPointer!T || is(T == class)) {
+            assert(data && length > 0, "Data can not be empty");
+            auto bytes = (cast(const(ubyte)*)data)[0 .. length];
+
+            enum FNV_PARAMS = () {
+                static if (SIZE_WIDTH == 128) {
+                    return "enum FNV_OFFSET_BASIS = 144066263297769815596495629667062367629U;" ~
+                        "enum FNV_PRIME = 309485009821345068724781371U;";
+                } else static if (SIZE_WIDTH == 64) {
+                    return "enum FNV_OFFSET_BASIS = 14695981039346656037U;" ~
+                        "enum FNV_PRIME = 1099511628211U;";
+                } else static if (SIZE_WIDTH == 32) {
+                    return "enum FNV_OFFSET_BASIS = 2166136261U;" ~
+                        "enum FNV_PRIME = 16777619U;";
+                } else
+                    static assert(0, "Not implemented");
+            }();
+            mixin(FNV_PARAMS);
+
+            size_t hash = FNV_OFFSET_BASIS;
+            foreach (b; bytes) {
+                hash ^= b;
+                hash *= FNV_PRIME;
+            }
+
+            return hash;
+        }
+
+        size_t getHash(scope const Key key) @trusted {
+            static if (isIntegral!Key || is(Key == struct) || is(Key == union)) {
+                return fnv1a(&key, Key.sizeof);
+            } else static if (isSomeString!Key || isDynamicArray!Key || isStaticArray!Key) {
+                return fnv1a(&key[0], key.length * key[0].sizeof);
+            } else static if (is(Key == class)) {
+                return fnv1a(key, key ? Key.classinfo.m_init.length : Key.sizeof);
+            } else {
+                static assert(0, "Unsupported key type");
+            }
+        }
 
         bool equals(scope const Key k1, scope const Key k2) {
             static if (is(K == const(char)*))
